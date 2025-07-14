@@ -1,24 +1,28 @@
 version: "3"
 
 services:
+  # Nginx 웹 서버 설정
   nginx:
-    image: nginx:1.25-alpine
+    image: nginx:1.25-alpine    # 알파인 리눅스 기반의 경량화된 Nginx 이미지
     ports:
-      - "80:80"
-      - "443:443"
+      - "80:80"    # HTTP 포트
+      - "443:443"  # HTTPS 포트
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
-      - ./certbot/conf:/etc/letsencrypt
-      - ./certbot/www:/var/www/certbot
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf  # Nginx 설정 파일
+      - ./certbot/conf:/etc/letsencrypt                    # SSL 인증서 저장 경로
+      - ./certbot/www:/var/www/certbot                     # SSL 인증서 발급용 웹루트 경로
     depends_on:
-      - fastapi
+      - fastapi    # FastAPI 서비스가 먼저 시작된 후 Nginx 시작
+    # 6시간마다 Nginx를 재시작하여 SSL 인증서 자동 갱신 적용
     command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
 
+  # Let's Encrypt SSL 인증서 관리 서비스
   certbot:
-    image: certbot/certbot
+    image: certbot/certbot    # Let's Encrypt의 공식 Certbot 이미지
     volumes:
-      - ./certbot/conf:/etc/letsencrypt
-      - ./certbot/www:/var/www/certbot
+      - ./certbot/conf:/etc/letsencrypt    # SSL 인증서와 설정 저장
+      - ./certbot/www:/var/www/certbot     # 도메인 소유권 확인용 웹루트
+    # 12시간마다 SSL 인증서 갱신 시도 (실제 갱신은 만료 30일 전에만 수행)
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
 
   db:
