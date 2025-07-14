@@ -4,20 +4,22 @@ services:
   traefik:
     image: traefik:v2.10
     command:
-      - "--api.insecure=true"  # 개발 환경용, 운영에서는 false로 설정
+      - "--api.insecure=false"
       - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
-      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
-      - "--certificatesresolvers.myresolver.acme.email=angal23120@gmail.com"  # 이메일 주소 변경 필요
-      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+      - "--api.dashboard=true"
+      - "--entrypoints.websecure.address=:443"  # 중요
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"  # 중요
+      - "--entryPoints.web.http.redirections.entrypoint.scheme=https"  # 중요
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"  # 중요
+      - "--certificatesresolvers.letsencrypt.acme.email=angal23120@gmail.com"  # 중요
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"  # 중요
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
-      - "letsencrypt:/letsencrypt"
+      - /var/run/docker.sock:/var/run/docker.sock
+      - traefik-certificates:/letsencrypt  # 중요
     networks:
       - traefik-public
 
@@ -44,16 +46,11 @@ services:
       - backend
       - traefik-public
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.fastapi.rule=Host(`api.cloudsession.cloud`)"
-      - "traefik.http.routers.fastapi.entrypoints=websecure"
-      - "traefik.http.routers.fastapi.tls.certresolver=myresolver"
-      - "traefik.http.services.fastapi.loadbalancer.server.port=8080"
-      # HTTP to HTTPS redirect
-      - "traefik.http.routers.fastapi-http.rule=Host(`cloudsession.cloud`)"
-      - "traefik.http.routers.fastapi-http.entrypoints=web"
-      - "traefik.http.routers.fastapi-http.middlewares=redirect-to-https"
-      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      - traefik.enable=true
+      - traefik.http.services.fastapi.loadbalancer.server.port=8000
+      - traefik.http.routers.fastapi.entrypoints=websecure
+      - traefik.http.routers.fastapi.tls.certresolver=letsencrypt
+      - traefik.http.routers.fastapi.rule=Host(`api.cloudsession.cloud`)
     depends_on:
       - db
     restart: always
@@ -74,4 +71,4 @@ networks:
 
 volumes:
   postgres_data_dev:
-  letsencrypt:
+  traefik-certificates:   # 중요
