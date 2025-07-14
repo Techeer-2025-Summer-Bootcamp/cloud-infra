@@ -1,2 +1,8 @@
 /fastapi/app/__pycache__/
 /fastapi/.DS_Store
+.terraform/
+terraform.tfstate
+terraform.tfstate.backup
+.DS_Store
+.terraform.lock.hcl
+silken-psyche-465905-a6-a832473ac906.json
