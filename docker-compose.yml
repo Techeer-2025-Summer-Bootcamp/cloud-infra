@@ -44,16 +44,16 @@ services:
     networks:
       - backend
       - traefik-public
-    expose:
-      - "8080"
+    ports:
+      - "8080:8080"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.fastapi.rule=Host(`cloudsession.cloud`)"
+      - "traefik.http.routers.fastapi.rule=Host(`api.cloudsession.cloud`)"
       - "traefik.http.routers.fastapi.entrypoints=websecure"
       - "traefik.http.routers.fastapi.tls.certresolver=myresolver"
       - "traefik.http.services.fastapi.loadbalancer.server.port=8080"
       # HTTP to HTTPS redirect
-      - "traefik.http.routers.fastapi-http.rule=Host(`cloudsession.cloud`)"
+      - "traefik.http.routers.fastapi-http.rule=Host(`api.cloudsession.cloud`)"
       - "traefik.http.routers.fastapi-http.entrypoints=web"
       - "traefik.http.routers.fastapi-http.middlewares=redirect-to-https"
       - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
