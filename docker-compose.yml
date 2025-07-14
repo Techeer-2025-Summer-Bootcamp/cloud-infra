@@ -1,6 +1,27 @@
 version: "3"
 
 services:
+  traefik:
+    image: traefik:v2.10
+    command:
+      - "--api.insecure=true"  # 개발 환경용, 운영에서는 false로 설정
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
+      - "--certificatesresolvers.myresolver.acme.email=angal23120@gmail.com"  # 이메일 주소 변경 필요
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # Traefik 대시보드 (개발환경용)
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "letsencrypt:/letsencrypt"
+    networks:
+      - traefik-public
+
   db:
     image: postgres:12.0-alpine
     volumes:
@@ -9,17 +30,33 @@ services:
       POSTGRES_USER: "dev_user"
       POSTGRES_PASSWORD: "dev_password"
       POSTGRES_DB: "dev_db"
+    networks:
+      - backend
     ports:
       - "5432:5432"
 
   fastapi:
     build: ./fastapi
-    ports:
-      - "8080:8080"
     volumes:
-      - ./fastapi:/backend # 로컬 소스코드를 컨테이너에 마운트
+      - ./fastapi:/backend
     environment:
-      - DATABASE_URL=postgresql://dev_user:dev_password@db:5432/dev_db  
+      - DATABASE_URL=postgresql://dev_user:dev_password@db:5432/dev_db
+    networks:
+      - backend
+      - traefik-public
+    expose:
+      - "8000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.fastapi.rule=Host(`cloudsession.cloud`)"
+      - "traefik.http.routers.fastapi.entrypoints=websecure"
+      - "traefik.http.routers.fastapi.tls.certresolver=myresolver"
+      - "traefik.http.services.fastapi.loadbalancer.server.port=8000"
+      # HTTP to HTTPS redirect
+      - "traefik.http.routers.fastapi-http.rule=Host(`cloudsession.cloud`)"
+      - "traefik.http.routers.fastapi-http.entrypoints=web"
+      - "traefik.http.routers.fastapi-http.middlewares=redirect-to-https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
     depends_on:
       - db
     restart: always
@@ -32,5 +69,12 @@ services:
           target: /app/requirements.txt
           action: rebuild
 
+networks:
+  traefik-public:
+    external: true
+  backend:
+    internal: true
+
 volumes:
   postgres_data_dev:
+  letsencrypt:
