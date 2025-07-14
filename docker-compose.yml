@@ -1,0 +1,36 @@
+version: "3"
+
+services:
+  db:
+    image: postgres:12.0-alpine
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data/
+    environment:
+      POSTGRES_USER: "dev_user"
+      POSTGRES_PASSWORD: "dev_password"
+      POSTGRES_DB: "dev_db"
+    ports:
+      - "5432:5432"
+
+  fastapi:
+    build: ./fastapi
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./fastapi:/backend # 로컬 소스코드를 컨테이너에 마운트
+    environment:
+      - DATABASE_URL=postgresql://dev_user:dev_password@db:5432/dev_db  
+    depends_on:
+      - db
+    restart: always
+    develop:
+      watch:
+        - path: ./fastapi/app
+          target: /app/app
+          action: sync+restart
+        - path: ./fastapi/requirements.txt
+          target: /app/requirements.txt
+          action: rebuild
+
+volumes:
+  postgres_data_dev:
