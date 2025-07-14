@@ -40,7 +40,7 @@ resource "google_compute_firewall" "main-ssh-icmp" {
 
     allow {
         protocol = "tcp"
-        ports    = ["22", "80", "443"]  # 포트 설정
+        ports    = ["22", "80", "443", "8080"]  # 포트 설정
     }
 
     allow {
