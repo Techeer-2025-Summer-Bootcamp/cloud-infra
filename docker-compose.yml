@@ -1,6 +1,26 @@
 version: "3"
 
 services:
+  nginx:
+    image: nginx:1.25-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    depends_on:
+      - fastapi
+    command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
+
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
   db:
     image: postgres:12.0-alpine
     volumes:
@@ -14,12 +34,14 @@ services:
 
   fastapi:
     build: ./fastapi
-    ports:
-      - "8080:8080"
+    # ports:
+    #   - "8080:8080"
     volumes:
       - ./fastapi:/backend # 로컬 소스코드를 컨테이너에 마운트
     environment:
-      - DATABASE_URL=postgresql://dev_user:dev_password@db:5432/dev_db  
+      - DATABASE_URL=postgresql://dev_user:dev_password@db:5432/dev_db
+    expose:
+      - "8080"
     depends_on:
       - db
     restart: always
