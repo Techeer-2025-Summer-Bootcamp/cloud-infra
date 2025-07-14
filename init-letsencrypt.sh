@@ -1,23 +1,74 @@
 #!/bin/bash
 
+# 스크립트가 있는 디렉토리로 이동
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+# 에러 발생 시 스크립트 중단
+set -e
+
+# 함수: 에러 메시지 출력
+error_exit() {
+    echo "Error: $1" >&2
+    exit 1
+}
+
 # docker-compose 설치 여부 확인 및 설치
 if ! [ -x "$(command -v docker-compose)" ]; then
     echo 'docker-compose가 설치되어 있지 않습니다. 설치를 시작합니다...' >&2
     
     # 최신 버전의 Docker Compose 설치
-    sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.5/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.5/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose || error_exit "Docker Compose 다운로드 실패"
     
     # 실행 권한 부여
-    sudo chmod +x /usr/local/bin/docker-compose
+    sudo chmod +x /usr/local/bin/docker-compose || error_exit "Docker Compose 권한 설정 실패"
     
     # 설치 확인
     if ! [ -x "$(command -v docker-compose)" ]; then
-        echo 'Error: docker-compose 설치에 실패했습니다.' >&2
-        exit 1
+        error_exit "docker-compose 설치에 실패했습니다."
     else
         echo 'docker-compose가 성공적으로 설치되었습니다.'
     fi
 fi
+
+# 필요한 디렉토리 생성
+echo "### 필요한 디렉토리 구조를 생성합니다..."
+
+# 현재 디렉토리 권한 확인
+if [ ! -w "." ]; then
+    error_exit "현재 디렉토리에 쓰기 권한이 없습니다. sudo로 실행해주세요."
+fi
+
+# docker-compose.yml 파일 존재 확인
+if [ ! -f "docker-compose.yml" ]; then
+    error_exit "docker-compose.yml 파일을 찾을 수 없습니다. 올바른 디렉토리에서 실행해주세요."
+fi
+
+# nginx 설정 파일 백업 (이미 존재하는 경우)
+if [ -f "nginx/nginx.conf" ]; then
+    echo "nginx.conf 파일을 백업합니다..."
+    cp nginx/nginx.conf nginx.conf.backup || error_exit "nginx.conf 백업 실패"
+fi
+
+# 기존 디렉토리 제거 후 새로 생성
+echo "기존 nginx, certbot 디렉토리를 정리합니다..."
+rm -rf nginx certbot || error_exit "기존 디렉토리 제거 실패"
+
+echo "새로운 디렉토리 구조를 생성합니다..."
+mkdir -p nginx certbot/conf certbot/www || error_exit "디렉토리 생성 실패"
+
+# nginx.conf 복원 (백업이 있는 경우)
+if [ -f "nginx.conf.backup" ]; then
+    echo "nginx.conf 파일을 복원합니다..."
+    mv nginx.conf.backup nginx/nginx.conf || error_exit "nginx.conf 복원 실패"
+fi
+
+# 디렉토리 권한 확인
+if [ ! -w "nginx" ] || [ ! -w "certbot" ]; then
+    error_exit "생성된 디렉토리에 쓰기 권한이 없습니다."
+fi
+
+echo "디렉토리 구조가 성공적으로 생성되었습니다."
 
 # SSL 인증서 설정
 domains=(api.cloudsession.cloud)    # SSL 인증서를 발급받을 도메인 이름
