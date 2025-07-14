@@ -1,9 +1,22 @@
 #!/bin/bash
 
-# docker-compose 명령어가 설치되어 있는지 확인
+# docker-compose 설치 여부 확인 및 설치
 if ! [ -x "$(command -v docker-compose)" ]; then
-  echo 'Error: docker-compose is not installed.' >&2
-  exit 1
+    echo 'docker-compose가 설치되어 있지 않습니다. 설치를 시작합니다...' >&2
+    
+    # 최신 버전의 Docker Compose 설치
+    sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.5/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    
+    # 실행 권한 부여
+    sudo chmod +x /usr/local/bin/docker-compose
+    
+    # 설치 확인
+    if ! [ -x "$(command -v docker-compose)" ]; then
+        echo 'Error: docker-compose 설치에 실패했습니다.' >&2
+        exit 1
+    else
+        echo 'docker-compose가 성공적으로 설치되었습니다.'
+    fi
 fi
 
 # SSL 인증서 설정
