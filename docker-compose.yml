@@ -1,28 +1,6 @@
 version: "3"
 
 services:
-  traefik:
-    image: traefik:v2.10
-    command:
-      - "--api.insecure=false"
-      - "--providers.docker=true"
-      - "--entrypoints.web.address=:80"
-      - "--api.dashboard=true"
-      - "--entrypoints.websecure.address=:443"  # 중요
-      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"  # 중요
-      - "--entryPoints.web.http.redirections.entrypoint.scheme=https"  # 중요
-      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"  # 중요
-      - "--certificatesresolvers.letsencrypt.acme.email=angal23120@gmail.com"  # 중요
-      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"  # 중요
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - traefik-certificates:/letsencrypt  # 중요
-    networks:
-      - traefik-public
-
   db:
     image: postgres:12.0-alpine
     volumes:
@@ -44,31 +22,15 @@ services:
       - DATABASE_URL=postgresql://dev_user:dev_password@db:5432/dev_db
     networks:
       - backend
-      - traefik-public
-    labels:
-      - traefik.enable=true
-      - traefik.http.services.fastapi.loadbalancer.server.port=8000
-      - traefik.http.routers.fastapi.entrypoints=websecure
-      - traefik.http.routers.fastapi.tls.certresolver=letsencrypt
-      - traefik.http.routers.fastapi.rule=Host(`api.cloudsession.cloud`)
+    ports:
+      - "8080:8080"
     depends_on:
       - db
     restart: always
-    develop:
-      watch:
-        - path: ./fastapi/app
-          target: /app/app
-          action: sync+restart
-        - path: ./fastapi/requirements.txt
-          target: /app/requirements.txt
-          action: rebuild
 
 networks:
-  traefik-public:
-    external: true
   backend:
     internal: true
 
 volumes:
   postgres_data_dev:
-  traefik-certificates:   # 중요
