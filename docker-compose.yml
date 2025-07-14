@@ -15,7 +15,6 @@ services:
     ports:
       - "80:80"
       - "443:443"
-      - "8000:8000"  # Traefik 대시보드 (개발환경용)
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - "letsencrypt:/letsencrypt"
@@ -44,8 +43,6 @@ services:
     networks:
       - backend
       - traefik-public
-    ports:
-      - "8080:8080"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.fastapi.rule=Host(`api.cloudsession.cloud`)"
@@ -53,7 +50,7 @@ services:
       - "traefik.http.routers.fastapi.tls.certresolver=myresolver"
       - "traefik.http.services.fastapi.loadbalancer.server.port=8080"
       # HTTP to HTTPS redirect
-      - "traefik.http.routers.fastapi-http.rule=Host(`api.cloudsession.cloud`)"
+      - "traefik.http.routers.fastapi-http.rule=Host(`cloudsession.cloud`)"
       - "traefik.http.routers.fastapi-http.entrypoints=web"
       - "traefik.http.routers.fastapi-http.middlewares=redirect-to-https"
       - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
